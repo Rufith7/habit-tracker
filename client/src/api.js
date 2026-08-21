@@ -23,8 +23,6 @@ async function apiRequest(endpoint, options = {}) {
   return data
 }
 
-// ==================== HABITS ====================
-
 export async function getHabits() {
   return apiRequest('/habits')
 }
@@ -39,41 +37,15 @@ export async function createHabit({ name, description }) {
   })
 }
 
-export async function updateHabit(habitId, { name, description }) {
-  return apiRequest(`/habits/${habitId}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      name,
-      description,
-    }),
-  })
-}
-
-export async function deleteHabit(habitId) {
-  return apiRequest(`/habits/${habitId}`, {
-    method: 'DELETE',
-  })
-}
-
-// ==================== CHECK-INS ====================
-
 export async function createCheckIn(habitId) {
   return apiRequest(`/habits/${habitId}/check-ins`, {
     method: 'POST',
   })
 }
 
-export async function getCheckIns(habitId) {
-  return apiRequest(`/habits/${habitId}/check-ins`)
+export async function getHabitStats(habitId) {
+  return apiRequest(`/habits/${habitId}/stats`)
 }
-
-export async function deleteCheckIn(habitId, localDay) {
-  return apiRequest(`/habits/${habitId}/check-ins/${localDay}`, {
-    method: 'DELETE',
-  })
-}
-
-// ==================== AUTH ====================
 
 export async function registerUser({ email, password, timezone }) {
   return apiRequest('/auth/register', {

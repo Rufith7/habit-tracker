@@ -1,41 +1,49 @@
 import { useState } from 'react'
 import { createCheckIn } from '../api'
 
-function HabitCard({ habit, onHabitChange }) {
-  const [checkingIn, setCheckingIn] = useState(false)
+function HabitCard({ id, name, description, completedToday, onCheckIn }) {
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   async function handleCheckIn() {
-    setCheckingIn(true)
+    if (completedToday || loading) {
+      return
+    }
+
     setError('')
+    setLoading(true)
 
     try {
-      await createCheckIn(habit.id)
-      await onHabitChange()
+      await createCheckIn(id)
+      onCheckIn(id)
     } catch (error) {
       setError(error.message)
     } finally {
-      setCheckingIn(false)
+      setLoading(false)
     }
   }
 
   return (
     <div className="habit-card">
-      <div>
-        <h3>{habit.name}</h3>
+      <div className="habit-info">
+        <h3>{name}</h3>
+        <p>{description || 'No description'}</p>
 
-        {habit.description && <p>{habit.description}</p>}
-
-        {error && <small className="error-message">{error}</small>}
+        {error && <small className="habit-error">{error}</small>}
       </div>
 
       <button
-        className="check-button"
+        type="button"
+        className={`check-button ${completedToday ? 'completed' : ''}`}
         onClick={handleCheckIn}
-        disabled={checkingIn}
-        title="Mark habit as completed today"
+        disabled={completedToday || loading}
+        title={
+          completedToday
+            ? 'Completed today'
+            : 'Mark habit as complete'
+        }
       >
-        {checkingIn ? '...' : '✓'}
+        {loading ? '...' : completedToday ? '✓' : '✓'}
       </button>
     </div>
   )
