@@ -1,16 +1,23 @@
-function StatsCard({ label, value, unit }) {
+function StatsCard({
+  icon,
+  label,
+  value,
+  unit,
+  accent = 'purple',
+}) {
   return (
-    <div className="stat-card">
-      <span className="stat-label">
-        {label}
-      </span>
+    <article className={`stat-card stat-${accent}`}>
+      <div className="stat-top">
+        <div className="stat-icon">{icon}</div>
 
-      <strong>{value}</strong>
+        <span className="stat-label">{label}</span>
+      </div>
 
-      <span className="stat-unit">
-        {unit}
-      </span>
-    </div>
+      <div className="stat-value-row">
+        <strong>{value}</strong>
+        <span>{unit}</span>
+      </div>
+    </article>
   )
 }
 

@@ -1,51 +1,55 @@
-import { useState } from 'react'
-import { createCheckIn } from '../api'
-
-function HabitCard({ id, name, description, completedToday, onCheckIn }) {
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  async function handleCheckIn() {
-    if (completedToday || loading) {
-      return
-    }
-
-    setError('')
-    setLoading(true)
-
-    try {
-      await createCheckIn(id)
-      onCheckIn(id)
-    } catch (error) {
-      setError(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
+function HabitCard({
+  name,
+  description,
+  stats,
+  onCheckIn,
+}) {
+  const completed = stats?.completedToday
 
   return (
-    <div className="habit-card">
-      <div className="habit-info">
-        <h3>{name}</h3>
-        <p>{description || 'No description'}</p>
+    <article className={`habit-card ${completed ? 'completed' : ''}`}>
+      <div className="habit-card-left">
+        <button
+          className={`check-button ${completed ? 'checked' : ''}`}
+          onClick={onCheckIn}
+          aria-label={
+            completed
+              ? `Undo ${name} check-in`
+              : `Complete ${name}`
+          }
+        >
+          {completed ? '✓' : ''}
+        </button>
 
-        {error && <small className="habit-error">{error}</small>}
+        <div className="habit-info">
+          <div className="habit-title-row">
+            <h3>{name}</h3>
+
+            {completed && (
+              <span className="completed-badge">
+                Completed
+              </span>
+            )}
+          </div>
+
+          {description && <p>{description}</p>}
+
+          <div className="habit-meta">
+            <span>
+              🔥 {stats?.currentStreak || 0} day streak
+            </span>
+
+            <span>
+              ✓ {stats?.totalCheckIns || 0} check-ins
+            </span>
+          </div>
+        </div>
       </div>
 
-      <button
-        type="button"
-        className={`check-button ${completedToday ? 'completed' : ''}`}
-        onClick={handleCheckIn}
-        disabled={completedToday || loading}
-        title={
-          completedToday
-            ? 'Completed today'
-            : 'Mark habit as complete'
-        }
-      >
-        {loading ? '...' : completedToday ? '✓' : '✓'}
-      </button>
-    </div>
+      <div className="habit-arrow">
+        →
+      </div>
+    </article>
   )
 }
 

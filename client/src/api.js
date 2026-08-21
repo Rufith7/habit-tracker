@@ -14,7 +14,13 @@ async function apiRequest(endpoint, options = {}) {
     },
   })
 
-  const data = await response.json()
+  let data = {}
+
+  try {
+    data = await response.json()
+  } catch {
+    data = {}
+  }
 
   if (!response.ok) {
     throw new Error(data.message || 'Something went wrong')
@@ -43,8 +49,30 @@ export async function createCheckIn(habitId) {
   })
 }
 
+export async function deleteCheckIn(habitId, localDay) {
+  return apiRequest(`/habits/${habitId}/check-ins/${localDay}`, {
+    method: 'DELETE',
+  })
+}
+
 export async function getHabitStats(habitId) {
   return apiRequest(`/habits/${habitId}/stats`)
+}
+
+export async function updateHabit(id, { name, description }) {
+  return apiRequest(`/habits/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      name,
+      description,
+    }),
+  })
+}
+
+export async function deleteHabit(id) {
+  return apiRequest(`/habits/${id}`, {
+    method: 'DELETE',
+  })
 }
 
 export async function registerUser({ email, password, timezone }) {

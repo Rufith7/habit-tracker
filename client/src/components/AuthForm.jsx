@@ -26,7 +26,7 @@ function AuthForm({ onLogin }) {
           password,
         })
       } else {
-        data = await registerUser({
+        await registerUser({
           email,
           password,
           timezone,
@@ -53,73 +53,171 @@ function AuthForm({ onLogin }) {
 
   return (
     <div className="auth-page">
-      <div className="auth-card">
-        <h1>{isLogin ? 'Welcome Back' : 'Create Account'}</h1>
+      <div className="auth-background-orb orb-one" />
+      <div className="auth-background-orb orb-two" />
 
-        <p>
-          {isLogin
-            ? 'Sign in to continue tracking your habits.'
-            : 'Start building better habits today.'}
-        </p>
+      <div className="auth-layout">
+        <section className="auth-showcase">
+          <div className="brand auth-brand">
+            <div className="brand-mark">H</div>
 
-        <form onSubmit={handleSubmit}>
-          <label htmlFor="email">Email</label>
+            <div>
+              <strong>HabitFlow</strong>
+              <span>Personal growth dashboard</span>
+            </div>
+          </div>
 
-          <input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            required
-          />
+          <div className="showcase-content">
+            <div className="status-badge">
+              <span className="status-dot" />
+              BUILD YOUR BEST SELF
+            </div>
 
-          <label htmlFor="password">Password</label>
+            <h1>
+              Small habits.
+              <span>Big changes.</span>
+            </h1>
 
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Minimum 8 characters"
-            minLength="8"
-            required
-          />
+            <p>
+              Turn everyday actions into lasting progress.
+              Track your habits, build streaks, and become
+              more consistent one day at a time.
+            </p>
 
-          {!isLogin && (
-            <>
-              <label htmlFor="timezone">Timezone</label>
+            <div className="showcase-stats">
+              <div>
+                <strong>01</strong>
+                <span>Track</span>
+              </div>
 
-              <input
-                id="timezone"
-                type="text"
-                value={timezone}
-                onChange={(event) => setTimezone(event.target.value)}
-                required
-              />
-            </>
-          )}
+              <div>
+                <strong>02</strong>
+                <span>Commit</span>
+              </div>
 
-          {error && <p className="auth-error">{error}</p>}
+              <div>
+                <strong>03</strong>
+                <span>Grow</span>
+              </div>
+            </div>
+          </div>
+        </section>
 
-          <button type="submit" disabled={loading}>
-            {loading
-              ? 'Please wait...'
-              : isLogin
-                ? 'Sign In'
-                : 'Create Account'}
-          </button>
-        </form>
+        <section className="auth-panel">
+          <div className="auth-card">
+            <div className="auth-card-header">
+              <div className="auth-icon">✦</div>
 
-        <button
-          type="button"
-          className="auth-toggle"
-          onClick={toggleMode}
-        >
-          {isLogin
-            ? "Don't have an account? Register"
-            : 'Already have an account? Sign in'}
-        </button>
+              <h2>
+                {isLogin
+                  ? 'Welcome back'
+                  : 'Start your journey'}
+              </h2>
+
+              <p>
+                {isLogin
+                  ? 'Sign in to continue your progress.'
+                  : 'Create an account and start building better habits.'}
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit}>
+              <div className="input-group">
+                <label htmlFor="email">Email address</label>
+
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(event) =>
+                    setEmail(event.target.value)
+                  }
+                  placeholder="you@example.com"
+                  autoComplete="email"
+                  required
+                />
+              </div>
+
+              <div className="input-group">
+                <label htmlFor="password">Password</label>
+
+                <input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(event) =>
+                    setPassword(event.target.value)
+                  }
+                  placeholder="Minimum 8 characters"
+                  minLength={8}
+                  autoComplete={
+                    isLogin ? 'current-password' : 'new-password'
+                  }
+                  required
+                />
+              </div>
+
+              {!isLogin && (
+                <div className="input-group">
+                  <label htmlFor="timezone">Timezone</label>
+
+                  <input
+                    id="timezone"
+                    type="text"
+                    value={timezone}
+                    onChange={(event) =>
+                      setTimezone(event.target.value)
+                    }
+                    required
+                  />
+                </div>
+              )}
+
+              {error && (
+                <div className="auth-error">
+                  <span>!</span>
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="auth-submit"
+                disabled={loading}
+              >
+                {loading
+                  ? 'Please wait...'
+                  : isLogin
+                    ? 'Sign in'
+                    : 'Create account'}
+
+                {!loading && <span>→</span>}
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <span>OR</span>
+            </div>
+
+            <button
+              type="button"
+              className="auth-toggle"
+              onClick={toggleMode}
+            >
+              {isLogin
+                ? "Don't have an account?"
+                : 'Already have an account?'}
+
+              <strong>
+                {isLogin ? 'Create one' : 'Sign in'}
+              </strong>
+            </button>
+          </div>
+
+          <p className="auth-footer">
+            Your progress belongs to you.
+          </p>
+        </section>
       </div>
     </div>
   )
