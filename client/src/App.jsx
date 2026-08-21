@@ -1,60 +1,94 @@
-import Navbar from './components/Navbar'
-import StatsCard from './components/StatsCard'
+import { useEffect, useState } from 'react'
+import AuthForm from './components/AuthForm'
 import HabitList from './components/HabitList'
+import StatsCard from './components/StatsCard'
+import { getCurrentUser, logoutUser } from './api'
 import './App.css'
 
 function App() {
+  const [user, setUser] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    async function checkAuthentication() {
+      const token = localStorage.getItem('token')
+
+      if (!token) {
+        setLoading(false)
+        return
+      }
+
+      try {
+        const data = await getCurrentUser()
+        setUser(data.user)
+      } catch {
+        logoutUser()
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    checkAuthentication()
+  }, [])
+
+  function handleLogin(loggedInUser) {
+    setUser(loggedInUser)
+  }
+
+  function handleLogout() {
+    logoutUser()
+    setUser(null)
+  }
+
+  if (loading) {
+    return <div className="loading-screen">Loading...</div>
+  }
+
+  if (!user) {
+    return <AuthForm onLogin={handleLogin} />
+  }
+
   return (
     <div className="app">
-      <Navbar />
+      <header className="navbar">
+        <div>
+          <h2>Habit Tracker</h2>
+          <span>{user.email}</span>
+        </div>
 
-      <main className="main-content">
-        <section className="welcome-section">
-          <p className="eyebrow">YOUR HABIT JOURNEY</p>
+        <button onClick={handleLogout}>Logout</button>
+      </header>
 
-          <h1>
-            Build better habits.
-            <br />
-            One day at a time.
-          </h1>
-
-          <p className="subtitle">
-            Track your daily habits, maintain your streaks, and stay consistent.
-          </p>
+      <main className="dashboard">
+        <section className="dashboard-header">
+          <div>
+            <h1>My Habits</h1>
+            <p>Build consistency, one day at a time.</p>
+          </div>
         </section>
 
-        <section className="stats-grid" id="stats">
+        <section className="stats-grid">
+          <StatsCard
+            label="Total Habits"
+            value="3"
+            unit="habits"
+          />
+
+          <StatsCard
+            label="Completed Today"
+            value="0"
+            unit="check-ins"
+          />
+
           <StatsCard
             label="Current Streak"
-            value="4"
+            value="0"
             unit="days"
-          />
-
-          <StatsCard
-            label="Longest Streak"
-            value="7"
-            unit="days"
-          />
-
-          <StatsCard
-            label="Total Check-ins"
-            value="24"
-            unit="completed"
           />
         </section>
 
-        <section className="habits-section" id="habits">
-          <div className="section-header">
-            <div>
-              <p className="eyebrow">TODAY</p>
-              <h2>Your Habits</h2>
-            </div>
-
-            <button className="primary-button">
-              + Add Habit
-            </button>
-          </div>
-
+        <section>
+          <h2>Your Habits</h2>
           <HabitList />
         </section>
       </main>
