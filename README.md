@@ -52,8 +52,6 @@ Timezone: Asia/Kolkata
 * Create habits
 * View authenticated user's habits
 * View individual habits
-* Update habits
-* Delete habits
 * Optional habit descriptions
 * Ownership validation on protected resources
 
@@ -406,7 +404,6 @@ User
       └── CheckIn
 ```
 
-Deleting a user or habit cascades to its dependent records.
 
 ---
 
