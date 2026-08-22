@@ -1,78 +1,109 @@
-# Habit Tracker
+# Habit Tracker with Streaks
 
-A modern, full-stack habit tracking application that helps users create habits, track daily check-ins, maintain streaks, and monitor their progress.
+A full-stack habit tracking application built for the **Burdenoff Product Engineering Intern — Full Stack** take-home assignment.
 
-Built with **React, Node.js, Express, PostgreSQL, and Prisma**, with JWT-based authentication and a responsive modern UI.
+The application allows users to create habits, check in once per local calendar day, and track streaks using the user's assigned **IANA timezone** rather than elapsed UTC hours.
 
-## ✨ Features
-
-### 🔐 Authentication
-
-* User registration and login
-* JWT-based authentication
-* Protected API routes
-* Persistent login using local storage
-* Logout functionality
-* User-specific habit data
-* Automatic timezone detection during registration
-
-### 📋 Habit Management
-
-* Create new habits
-* View all personal habits
-* View individual habits
-* Update habits
-* Delete habits
-* Habit descriptions
-* User-specific habit isolation
-
-### ✅ Daily Check-ins
-
-* Mark habits as completed for the current day
-* Prevent duplicate daily check-ins
-* View habit check-in history
-* Delete check-ins
-* Track completion status
-
-### 📊 Statistics
-
-* Total habits
-* Completed habits today
-* Current streak
-* Longest streak
-* Total check-ins
-* Timezone-aware streak calculations
-
-### 🎨 Modern UI
-
-* Responsive dashboard
-* Modern authentication screen
-* Clean habit cards
-* Statistics cards
-* Responsive layout
-* Modern buttons and interactions
-* Mobile-friendly design
-* Loading and error states
+The main engineering challenge of this project is treating a habit check-in as a **calendar-day event**, not simply a timestamp.
 
 ---
 
-## 🛠️ Tech Stack
+## Overview
+
+Habit Tracker is designed around one core rule:
+
+> **A streak is based on the user's local calendar days, not elapsed hours.**
+
+For example, a user in `Asia/Kolkata` can have:
+
+```text
+2026-03-10 local day
+2026-03-11 local day
+2026-03-12 local day
+```
+
+These represent three consecutive habit days regardless of the exact UTC timestamps at which the check-ins were created.
+
+The backend owns all streak calculations and local-day decisions. The React frontend only displays the values returned by the API.
+
+---
+
+## Key Features
+
+### Authentication
+
+* User registration
+* User login
+* JWT-based authentication
+* Protected habit and check-in APIs
+* Secure password hashing with `bcryptjs`
+* User-specific data isolation
+* IANA timezone stored with each user
+
+Example:
+
+```text
+Email: user@example.com
+Timezone: Asia/Kolkata
+```
+
+### Habit Management
+
+* Create habits
+* View authenticated user's habits
+* View individual habits
+* Update habits
+* Delete habits
+* Optional habit descriptions
+* Ownership validation on protected resources
+
+### Daily Check-ins
+
+* One check-in per habit per local day
+* One-click check-in for today
+* Duplicate check-in protection
+* Check-in history
+* Check-in deletion
+* Database-level uniqueness constraint for:
+
+```text
+habitId + localDay
+```
+
+### Streak Tracking
+
+The backend calculates:
+
+* Current streak
+* Longest streak
+* Total check-ins
+* Whether the habit was completed today
+
+The frontend does **not** calculate streaks.
+
+This keeps business logic centralized on the server and prevents client-side manipulation of streak values.
+
+---
+
+## Tech Stack
 
 ### Frontend
 
 * React
-* JavaScript
 * Vite
-* CSS
+* JavaScript / JSX
+* CSS3
+* Responsive design
 * Fetch API
+* Component-based architecture
 
 ### Backend
 
 * Node.js
 * Express.js
+* REST API
 * JWT
 * bcryptjs
-* CORS
 * Luxon
 
 ### Database
@@ -86,17 +117,19 @@ Built with **React, Node.js, Express, PostgreSQL, and Prisma**, with JWT-based a
 * GitHub
 * npm
 * ESLint
+* VS Code
+* Browser Developer Tools
 
 ---
 
-## 📁 Project Structure
+## Architecture
+
+The project follows a simple full-stack separation:
 
 ```text
 habit-tracker/
 │
 ├── client/
-│   ├── public/
-│   │
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── AuthForm.jsx
@@ -116,13 +149,14 @@ habit-tracker/
 │
 ├── server/
 │   ├── prisma/
+│   │   ├── migrations/
 │   │   └── schema.prisma
 │   │
 │   └── src/
 │       ├── controllers/
 │       │   ├── authController.js
-│       │   ├── checkInController.js
 │       │   ├── habitController.js
+│       │   ├── checkInController.js
 │       │   └── statsController.js
 │       │
 │       ├── middleware/
@@ -130,8 +164,11 @@ habit-tracker/
 │       │
 │       ├── routes/
 │       │   ├── authRoutes.js
-│       │   ├── checkInRoutes.js
-│       │   └── habitRoutes.js
+│       │   ├── habitRoutes.js
+│       │   └── checkInRoutes.js
+│       │
+│       ├── utils/
+│       │   └── localDay.js
 │       │
 │       ├── lib/
 │       │   └── prisma.js
@@ -142,27 +179,567 @@ habit-tracker/
 └── README.md
 ```
 
+The frontend is responsible for presentation and user interaction.
+
+The backend is responsible for authentication, authorization, validation, persistence, local-day handling, and streak calculations.
+
 ---
 
-## ⚙️ Getting Started
+# Timezone and Local-Day Design
 
-### 1. Clone the repository
+This is the most important part of the application.
+
+A timestamp alone is not sufficient to determine which habit day a check-in belongs to.
+
+For example:
+
+```text
+UTC:
+2026-03-11T21:30:00Z
+
+Asia/Kolkata:
+2026-03-12 03:00
+```
+
+The check-in belongs to the user's local day:
+
+```text
+2026-03-12
+```
+
+not:
+
+```text
+2026-03-11
+```
+
+Therefore the application stores both:
+
+```text
+occurredAt
+localDay
+```
+
+### Why store both?
+
+`occurredAt` represents the actual instant when the check-in was created.
+
+`localDay` represents the calendar day that the check-in counts toward.
+
+This separates:
+
+```text
+"When did this record happen?"
+```
+
+from:
+
+```text
+"Which habit day does this record represent?"
+```
+
+---
+
+## Local-Day Representation
+
+The database stores `localDay` as a date value representing the user's calendar date.
+
+The backend converts the user's timezone-aware calendar day into a normalized database representation.
+
+The important invariant is:
+
+```text
+One habit
++
+One local calendar day
+=
+At most one check-in
+```
+
+This is also enforced by the database schema:
+
+```prisma
+@@unique([habitId, localDay])
+```
+
+That means duplicate check-ins cannot simply be prevented by the frontend.
+
+The database itself protects the invariant.
+
+---
+
+# Streak Calculation
+
+Streak calculations are performed server-side.
+
+The backend first retrieves the user's timezone:
+
+```text
+User
+ └── timezone
+```
+
+For example:
+
+```text
+Asia/Kolkata
+```
+
+The current local date is then calculated using that timezone.
+
+The backend converts stored check-in dates into local calendar dates and compares consecutive dates.
+
+Example:
+
+```text
+2026-03-10
+2026-03-11
+2026-03-12
+```
+
+produces:
+
+```text
+currentStreak = 3
+longestStreak = 3
+```
+
+A missing calendar day breaks the sequence.
+
+Example:
+
+```text
+2026-03-10
+2026-03-11
+2026-03-13
+```
+
+produces two streak sequences:
+
+```text
+2026-03-10 → 2026-03-11
+2026-03-13
+```
+
+The longest streak is therefore:
+
+```text
+2
+```
+
+---
+
+## Why the Frontend Does Not Calculate Streaks
+
+The frontend receives values such as:
+
+```json
+{
+  "currentStreak": 4,
+  "longestStreak": 7,
+  "totalCheckIns": 24,
+  "completedToday": true
+}
+```
+
+It does not determine whether a streak is alive.
+
+This prevents differences between:
+
+```text
+Frontend timezone
+Browser timezone
+Server timezone
+User timezone
+```
+
+from producing inconsistent results.
+
+The server is the single source of truth.
+
+---
+
+# Database Model
+
+The application uses PostgreSQL with Prisma.
+
+## User
+
+```text
+User
+├── id
+├── email
+├── passwordHash
+├── timezone
+└── createdAt
+```
+
+## Habit
+
+```text
+Habit
+├── id
+├── userId
+├── name
+├── description
+├── createdAt
+└── updatedAt
+```
+
+## CheckIn
+
+```text
+CheckIn
+├── id
+├── habitId
+├── occurredAt
+└── localDay
+```
+
+Relationships:
+
+```text
+User
+ │
+ └── Habit
+      │
+      └── CheckIn
+```
+
+Deleting a user or habit cascades to its dependent records.
+
+---
+
+# Database-Level Duplicate Protection
+
+The most important database constraint is:
+
+```prisma
+@@unique([habitId, localDay])
+```
+
+This prevents:
+
+```text
+Habit A
+2026-08-22
+2026-08-22
+```
+
+from being stored twice.
+
+The frontend therefore cannot accidentally create two valid check-ins for the same habit/day.
+
+The backend also performs an existence check before attempting to create the record so that users receive a meaningful API error rather than a raw database error.
+
+---
+
+# Authentication
+
+Authentication uses JWT.
+
+Login flow:
+
+```text
+React
+  │
+  │ POST /api/auth/login
+  ▼
+Express
+  │
+  ├── Find user
+  ├── Compare password using bcrypt
+  └── Create JWT
+  │
+  ▼
+React
+  │
+  └── Store token
+```
+
+Protected requests send:
+
+```http
+Authorization: Bearer <token>
+```
+
+The authentication middleware validates the token and exposes the authenticated user ID through:
+
+```javascript
+req.user.userId
+```
+
+Protected resources then verify ownership before accessing or modifying data.
+
+---
+
+# Password Security
+
+Passwords are never stored directly.
+
+During registration:
+
+```text
+Plain password
+      ↓
+bcrypt
+      ↓
+passwordHash
+      ↓
+PostgreSQL
+```
+
+During login:
+
+```text
+Entered password
+      ↓
+bcrypt.compare()
+      ↓
+Stored password hash
+```
+
+JWT secrets and database credentials are kept in environment variables rather than committed to Git.
+
+---
+
+# API Design
+
+## Authentication
+
+### Register
+
+```http
+POST /api/auth/register
+```
+
+Request:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "timezone": "Asia/Kolkata"
+}
+```
+
+### Login
+
+```http
+POST /api/auth/login
+```
+
+### Current User
+
+```http
+GET /api/auth/me
+```
+
+Requires authentication.
+
+---
+
+## Habits
+
+### Create Habit
+
+```http
+POST /api/habits
+```
+
+### Get Habits
+
+```http
+GET /api/habits
+```
+
+### Get Habit
+
+```http
+GET /api/habits/:id
+```
+
+### Update Habit
+
+```http
+PATCH /api/habits/:id
+```
+
+### Delete Habit
+
+```http
+DELETE /api/habits/:id
+```
+
+---
+
+## Check-ins
+
+### Check In
+
+```http
+POST /api/habits/:id/check-ins
+```
+
+### Check-in History
+
+```http
+GET /api/habits/:id/check-ins
+```
+
+### Remove Check-in
+
+```http
+DELETE /api/habits/:id/check-ins/:localDay
+```
+
+---
+
+## Habit Statistics
+
+```http
+GET /api/habits/:id/stats
+```
+
+Example response:
+
+```json
+{
+  "stats": {
+    "currentStreak": 4,
+    "longestStreak": 7,
+    "totalCheckIns": 24,
+    "completedToday": true
+  }
+}
+```
+
+---
+
+# Validation and Error Handling
+
+The backend validates important business rules instead of relying only on the frontend.
+
+Examples include:
+
+### Missing authentication
+
+```http
+401 Unauthorized
+```
+
+### Invalid or expired JWT
+
+```http
+401 Unauthorized
+```
+
+### Habit does not belong to user
+
+```http
+404 Not Found
+```
+
+### Invalid habit name
+
+```http
+400 Bad Request
+```
+
+### Duplicate check-in
+
+```http
+409 Conflict
+```
+
+The frontend displays API errors in the appropriate UI state rather than silently failing.
+
+---
+
+# Frontend Design
+
+The frontend was intentionally kept component-based rather than putting the complete dashboard into a single component.
+
+Important components include:
+
+```text
+AuthForm
+HabitList
+HabitCard
+StatsCard
+Navbar
+```
+
+The UI includes:
+
+* Responsive dashboard
+* Authentication screen
+* Habit cards
+* Streak statistics
+* Completion state
+* Loading states
+* Error states
+* Empty states
+* Responsive layouts
+* Modern visual styling
+* Clear primary actions
+
+The frontend communicates with the backend through a small API service layer:
+
+```text
+client/src/api.js
+```
+
+This keeps HTTP logic separate from presentation components.
+
+---
+
+# Environment Variables
+
+Create a `.env` file inside the `server` directory.
+
+Example:
+
+```env
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/habit_tracker"
+JWT_SECRET="replace-with-a-long-random-secret"
+PORT=5001
+```
+
+Do not commit the `.env` file.
+
+---
+
+# Getting Started
+
+## Prerequisites
+
+Install:
+
+* Node.js
+* npm
+* PostgreSQL
+* Git
+
+Recommended:
+
+```text
+Node.js 20+
+PostgreSQL 14+
+```
+
+---
+
+## 1. Clone the Repository
 
 ```bash
 git clone https://github.com/Rufith7/habit-tracker.git
 cd habit-tracker
 ```
 
-### 2. Install frontend dependencies
+---
 
-```bash
-cd client
-npm install
-```
-
-### 3. Install backend dependencies
-
-Open another terminal:
+## 2. Install Backend Dependencies
 
 ```bash
 cd server
@@ -171,61 +748,55 @@ npm install
 
 ---
 
-## 🔑 Environment Variables
+## 3. Configure Environment Variables
 
-Create a `.env` file inside the `server` directory.
+Create:
 
-```env
-DATABASE_URL="your_postgresql_connection_string"
-JWT_SECRET="your_secure_jwt_secret"
-PORT=5001
+```text
+server/.env
 ```
 
-### Example
+Example:
 
 ```env
-DATABASE_URL="postgresql://username:password@localhost:5432/habit_tracker"
-JWT_SECRET="your-super-secret-jwt-key"
+DATABASE_URL="postgresql://USER:PASSWORD@localhost:5432/habit_tracker"
+JWT_SECRET="your-secret-key"
 PORT=5001
 ```
-
-**Do not commit your `.env` file to GitHub.**
 
 ---
 
-## 🗄️ Database Setup
+## 4. Set Up the Database
 
-From the `server` directory:
-
-```bash
-npx prisma generate
-```
-
-Then run the Prisma migration:
+Run Prisma migrations:
 
 ```bash
 npx prisma migrate dev
 ```
 
-If the database schema is already configured and you only need to synchronize it:
+Generate the Prisma client:
 
 ```bash
-npx prisma db push
+npx prisma generate
 ```
 
 ---
 
-## ▶️ Run the Application
+## 5. Start the Backend
 
-### Start the backend
+From:
 
-From the `server` directory:
+```text
+server/
+```
+
+run:
 
 ```bash
 npm run dev
 ```
 
-The API runs on:
+The API should be available at:
 
 ```text
 http://localhost:5001
@@ -234,151 +805,286 @@ http://localhost:5001
 Health check:
 
 ```text
-http://localhost:5001/api/health
+GET http://localhost:5001/api/health
 ```
 
-### Start the frontend
+Expected response:
+
+```json
+{
+  "message": "Habit Tracker API is running"
+}
+```
+
+---
+
+## 6. Install Frontend Dependencies
 
 Open another terminal:
 
 ```bash
 cd client
+npm install
+```
+
+---
+
+## 7. Start the Frontend
+
+```bash
 npm run dev
 ```
 
-Vite will provide the local development URL, normally:
+Vite will provide the local development URL.
+
+Open it in the browser.
+
+---
+
+# Suggested Test Flow
+
+A reviewer can verify the application with the following flow:
+
+### 1. Register
+
+Create an account with:
 
 ```text
-http://localhost:5173
+Email: reviewer@example.com
+Password: Password123
+Timezone: Asia/Kolkata
 ```
 
----
+### 2. Login
 
-## 🔌 API Endpoints
+Log in using the created credentials.
 
-### Authentication
+### 3. Create a Habit
 
-| Method | Endpoint             | Description            |
-| ------ | -------------------- | ---------------------- |
-| POST   | `/api/auth/register` | Register a new user    |
-| POST   | `/api/auth/login`    | Login                  |
-| GET    | `/api/auth/me`       | Get authenticated user |
-
-### Habits
-
-| Method | Endpoint          | Description          |
-| ------ | ----------------- | -------------------- |
-| POST   | `/api/habits`     | Create habit         |
-| GET    | `/api/habits`     | Get user's habits    |
-| GET    | `/api/habits/:id` | Get a specific habit |
-| PATCH  | `/api/habits/:id` | Update habit         |
-| DELETE | `/api/habits/:id` | Delete habit         |
-
-### Check-ins
-
-| Method | Endpoint                              | Description           |
-| ------ | ------------------------------------- | --------------------- |
-| POST   | `/api/habits/:id/check-ins`           | Create daily check-in |
-| GET    | `/api/habits/:id/check-ins`           | Get habit check-ins   |
-| DELETE | `/api/habits/:id/check-ins/:localDay` | Delete a check-in     |
-
-### Statistics
-
-| Method | Endpoint                | Description          |
-| ------ | ----------------------- | -------------------- |
-| GET    | `/api/habits/:id/stats` | Get habit statistics |
-
----
-
-## 🔐 Authentication Flow
-
-The application uses JWT authentication.
-
-1. User registers an account.
-2. User logs in with email and password.
-3. Backend validates the credentials.
-4. Backend generates a JWT.
-5. Frontend stores the token in `localStorage`.
-6. API requests include the token using the `Authorization` header.
-7. Protected backend routes validate the token.
-8. Users can only access their own habits and check-ins.
-
-Example authorization header:
+Example:
 
 ```text
-Authorization: Bearer <JWT_TOKEN>
+Name: Morning Exercise
+Description: 30 minutes
 ```
 
----
+### 4. Check In
 
-## 📈 Habit Statistics
+Click the check-in button.
 
-The application calculates:
+### 5. Verify Statistics
 
-* Current streak
-* Longest streak
-* Total check-ins
-* Today's completion status
+The dashboard should update the relevant completion and streak values.
 
-Streak calculations use the user's configured timezone to determine the correct local day.
+### 6. Test Duplicate Protection
 
----
+Click check-in again for the same local day.
 
-## 🧪 Testing the Application
+The backend should reject the duplicate rather than creating a second record.
 
-After starting both frontend and backend:
+### 7. Test History
 
-1. Open the frontend.
-2. Create a new account.
-3. Log in.
-4. Create a habit.
-5. Confirm the habit appears on the dashboard.
-6. Click the check-in button.
-7. Confirm the check-in is recorded.
-8. Verify the statistics update.
-9. Log out.
-10. Log back in and verify the data persists.
+Open the habit's check-in history and verify stored local-day records.
 
 ---
 
-## 🚀 Future Improvements
+# Engineering Decisions
 
-Possible future enhancements include:
+## Server-side business logic
 
-* Habit editing UI
-* Habit deletion confirmation
-* Calendar-based habit history
-* Weekly and monthly analytics
-* Progress charts
-* Habit categories
-* Habit reminders
-* Browser notifications
-* Dark/light theme toggle
-* Password reset
-* Profile settings
-* Deployment with production environment variables
-* Automated frontend and backend tests
+The frontend does not decide:
+
+* whether a check-in is valid
+* whether a habit belongs to the user
+* whether a streak continues
+* whether a date belongs to the user's local day
+
+Those decisions belong to the backend.
 
 ---
 
-## 📌 Project Status
+## Database constraints
 
-**Status: Functional MVP**
+Important business rules are reinforced at the database layer where possible.
 
-The application currently supports authentication, habit management, daily check-ins, streak calculations, statistics, and a responsive modern frontend.
+The unique constraint:
 
----
+```prisma
+@@unique([habitId, localDay])
+```
 
-## 👨‍💻 Author
-
-**Rufith Shaik**
-
-MCA Graduate | Frontend Developer | React.js | JavaScript
-
-GitHub: [Rufith7](https://github.com/Rufith7)
+is particularly important because it protects against duplicate check-ins even if two requests reach the server concurrently.
 
 ---
 
-## 📄 License
+## Ownership checks
 
-This project is intended for learning, portfolio, and demonstration purposes.
+Protected resources are always queried using the authenticated user's ID.
+
+For example:
+
+```text
+habitId + userId
+```
+
+rather than simply:
+
+```text
+habitId
+```
+
+This prevents an authenticated user from accessing another user's habit by guessing its ID.
+
+---
+
+## Timezone isolation
+
+Timezone handling is based on the timezone stored for the user.
+
+The browser's timezone is not used to determine streaks.
+
+This is important because a user could open the application from a different location without changing the timezone associated with their habit history.
+
+---
+
+# Git Practices
+
+The project was developed using incremental Git commits rather than one large final commit.
+
+Examples of meaningful commits include:
+
+```text
+chore: define habit tracking data model
+feat: add authentication habits check-ins and stats
+chore: initialize React frontend
+feat: build habit dashboard UI
+feat: integrate frontend authentication
+feat: add habit creation and check-ins
+feat: complete habit tracking functionality
+feat: modernize habit tracker frontend
+```
+
+This history makes the development progression easier to review.
+
+---
+
+# Scope and Trade-offs
+
+The implementation intentionally prioritizes the core engineering requirements over unnecessary features.
+
+The focus areas are:
+
+```text
+Authentication
+        ↓
+Timezone-aware dates
+        ↓
+Habit ownership
+        ↓
+Check-in integrity
+        ↓
+Server-side streak calculation
+        ↓
+Database constraints
+        ↓
+Responsive frontend
+```
+
+The application does not introduce unnecessary state-management libraries or complex infrastructure where the existing React + Express architecture is sufficient.
+
+---
+
+# AI-Assisted Development
+
+AI tools were used during development as an implementation aid.
+
+The generated code was reviewed, tested, integrated, and debugged manually.
+
+The important engineering decisions remain explicit in the codebase, particularly:
+
+* timezone handling
+* database modeling
+* authentication
+* ownership checks
+* duplicate prevention
+* streak calculation
+* API boundaries
+
+AI assistance was therefore used to accelerate implementation rather than replace understanding of the application logic.
+
+---
+
+# What I Would Improve Next
+
+If this application were developed beyond the take-home scope, the next improvements would include:
+
+* Automated backend tests for timezone edge cases
+* Explicit backfill API and UI
+* Future-date validation tests
+* Habit creation-date validation for historical check-ins
+* Integration tests for duplicate concurrent requests
+* CI workflow for linting and tests
+* Docker Compose for local PostgreSQL setup
+* More granular API validation
+* Improved observability and structured logging
+
+These would be natural extensions without changing the core architecture.
+
+---
+
+# Assignment Alignment
+
+| Requirement                | Implementation                   |
+| -------------------------- | -------------------------------- |
+| React frontend             | React + Vite                     |
+| Node backend               | Node.js + Express                |
+| PostgreSQL                 | PostgreSQL                       |
+| ORM                        | Prisma                           |
+| User authentication        | JWT                              |
+| Secure password storage    | bcryptjs                         |
+| IANA timezone              | Stored on User                   |
+| Habit CRUD                 | Implemented                      |
+| Check-ins                  | Implemented                      |
+| One check-in per local day | Database unique constraint       |
+| User ownership             | Server-side authorization checks |
+| Server-side streaks        | Implemented with Luxon           |
+| Responsive UI              | Implemented                      |
+| API error handling         | Implemented                      |
+| Database migrations        | Prisma migrations                |
+| Environment secrets        | `.env`                           |
+| Git history                | Incremental feature commits      |
+
+---
+
+# Repository
+
+GitHub:
+
+https://github.com/Rufith7/habit-tracker
+
+---
+
+# Submission
+
+**Position:** Product Engineering Intern — Full Stack
+
+**Assignment:** Habit Tracker with Streaks
+
+**Developer:** Ruffith Shaik
+
+**Submission email:** `rufiths@gmail.com`
+
+**Repository:** `https://github.com/Rufith7/habit-tracker`
+
+---
+
+## Final Note
+
+The central design principle of this project is simple:
+
+```text
+A habit streak is a sequence of local calendar days,
+not a sequence of elapsed hours.
+```
+
+The backend owns that rule, the database protects its invariants, and the frontend presents the resulting state.
