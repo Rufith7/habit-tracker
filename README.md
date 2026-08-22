@@ -558,19 +558,6 @@ GET /api/habits
 ```http
 GET /api/habits/:id
 ```
-
-### Update Habit
-
-```http
-PATCH /api/habits/:id
-```
-
-### Delete Habit
-
-```http
-DELETE /api/habits/:id
-```
-
 ---
 
 ## Check-ins
