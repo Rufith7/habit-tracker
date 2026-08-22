@@ -43,39 +43,41 @@ export async function createHabit({ name, description }) {
   })
 }
 
-export async function createCheckIn(habitId) {
+export async function createCheckIn(habitId, localDay = null) {
   return apiRequest(`/habits/${habitId}/check-ins`, {
     method: 'POST',
+    body: JSON.stringify(
+      localDay
+        ? {
+            localDay,
+          }
+        : {},
+    ),
   })
 }
 
+export async function getCheckIns(habitId) {
+  return apiRequest(`/habits/${habitId}/check-ins`)
+}
+
 export async function deleteCheckIn(habitId, localDay) {
-  return apiRequest(`/habits/${habitId}/check-ins/${localDay}`, {
-    method: 'DELETE',
-  })
+  return apiRequest(
+    `/habits/${habitId}/check-ins/${localDay}`,
+    {
+      method: 'DELETE',
+    },
+  )
 }
 
 export async function getHabitStats(habitId) {
   return apiRequest(`/habits/${habitId}/stats`)
 }
 
-export async function updateHabit(id, { name, description }) {
-  return apiRequest(`/habits/${id}`, {
-    method: 'PATCH',
-    body: JSON.stringify({
-      name,
-      description,
-    }),
-  })
-}
-
-export async function deleteHabit(id) {
-  return apiRequest(`/habits/${id}`, {
-    method: 'DELETE',
-  })
-}
-
-export async function registerUser({ email, password, timezone }) {
+export async function registerUser({
+  email,
+  password,
+  timezone,
+}) {
   return apiRequest('/auth/register', {
     method: 'POST',
     body: JSON.stringify({
@@ -86,7 +88,10 @@ export async function registerUser({ email, password, timezone }) {
   })
 }
 
-export async function loginUser({ email, password }) {
+export async function loginUser({
+  email,
+  password,
+}) {
   const data = await apiRequest('/auth/login', {
     method: 'POST',
     body: JSON.stringify({

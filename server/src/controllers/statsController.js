@@ -6,7 +6,6 @@ async function getHabitStats(req, res) {
     const { id: habitId } = req.params;
     const userId = req.user.userId;
 
-    // Make sure the habit belongs to the authenticated user
     const habit = await prisma.habit.findFirst({
       where: {
         id: habitId,
@@ -30,16 +29,22 @@ async function getHabitStats(req, res) {
 
     const timezone = habit.user.timezone;
 
-    const today = DateTime.now()
-      .setZone(timezone)
-      .toISODate();
+    const now = DateTime.now().setZone(timezone);
+
+    if (!now.isValid) {
+      return res.status(500).json({
+        message: "User timezone is invalid",
+      });
+    }
+
+    const today = now.toISODate();
 
     const checkIns = await prisma.checkIn.findMany({
       where: {
         habitId,
       },
       orderBy: {
-        localDay: "desc",
+        localDay: "asc",
       },
       select: {
         id: true,
@@ -48,22 +53,37 @@ async function getHabitStats(req, res) {
       },
     });
 
-    const localDays = checkIns.map((checkIn) =>
-      DateTime.fromJSDate(checkIn.localDay, {
-        zone: "utc",
-      }).toISODate()
-    );
-
-    const uniqueDays = [...new Set(localDays)];
+    const uniqueDays = [
+      ...new Set(
+        checkIns.map((checkIn) =>
+          DateTime.fromJSDate(checkIn.localDay, {
+            zone: "utc",
+          }).toISODate()
+        )
+      ),
+    ].sort();
 
     const completedToday = uniqueDays.includes(today);
 
-    // Calculate current streak
+    /*
+     * Current streak:
+     *
+     * If today is completed:
+     *   start from today.
+     *
+     * Otherwise:
+     *   start from yesterday.
+     *
+     * This matches the assignment requirement:
+     * "ending today, or yesterday if today isn't logged."
+     */
     let currentStreak = 0;
 
-    let streakDate = DateTime.fromISO(today, {
-      zone: timezone,
-    });
+    let streakDate = completedToday
+      ? DateTime.fromISO(today, { zone: timezone })
+      : DateTime.fromISO(today, { zone: timezone }).minus({
+          days: 1,
+        });
 
     while (uniqueDays.includes(streakDate.toISODate())) {
       currentStreak++;
@@ -73,23 +93,27 @@ async function getHabitStats(req, res) {
       });
     }
 
-    // Calculate longest streak
+    /*
+     * Longest streak
+     */
     let longestStreak = 0;
     let runningStreak = 0;
 
-    const sortedDays = [...uniqueDays].sort();
-
-    for (let i = 0; i < sortedDays.length; i++) {
+    for (let i = 0; i < uniqueDays.length; i++) {
       if (i === 0) {
         runningStreak = 1;
       } else {
-        const previousDay = DateTime.fromISO(sortedDays[i - 1]);
-        const currentDay = DateTime.fromISO(sortedDays[i]);
+        const previous = DateTime.fromISO(uniqueDays[i - 1], {
+          zone: timezone,
+        });
 
-        const difference = currentDay.diff(
-          previousDay,
-          "days"
-        ).days;
+        const current = DateTime.fromISO(uniqueDays[i], {
+          zone: timezone,
+        });
+
+        const difference = current
+          .diff(previous, "days")
+          .days;
 
         if (difference === 1) {
           runningStreak++;
@@ -104,7 +128,7 @@ async function getHabitStats(req, res) {
       );
     }
 
-    res.json({
+    return res.json({
       stats: {
         currentStreak,
         longestStreak,
@@ -115,7 +139,7 @@ async function getHabitStats(req, res) {
   } catch (error) {
     console.error("Get habit stats error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Internal server error",
     });
   }
