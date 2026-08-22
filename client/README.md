@@ -21,8 +21,6 @@ Built with **React, Node.js, Express, PostgreSQL, and Prisma**, with JWT-based a
 * Create new habits
 * View all personal habits
 * View individual habits
-* Update habits
-* Delete habits
 * Habit descriptions
 * User-specific habit isolation
 
@@ -271,8 +269,6 @@ http://localhost:5173
 | POST   | `/api/habits`     | Create habit         |
 | GET    | `/api/habits`     | Get user's habits    |
 | GET    | `/api/habits/:id` | Get a specific habit |
-| PATCH  | `/api/habits/:id` | Update habit         |
-| DELETE | `/api/habits/:id` | Delete habit         |
 
 ### Check-ins
 
@@ -280,7 +276,6 @@ http://localhost:5173
 | ------ | ------------------------------------- | --------------------- |
 | POST   | `/api/habits/:id/check-ins`           | Create daily check-in |
 | GET    | `/api/habits/:id/check-ins`           | Get habit check-ins   |
-| DELETE | `/api/habits/:id/check-ins/:localDay` | Delete a check-in     |
 
 ### Statistics
 
